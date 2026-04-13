@@ -12,13 +12,11 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	h := &finance.Handler{}
+	svc := &finance.Service{}
+	h := finance.NewHandler(svc)
+
 	r.Get("/", h.HomePage)
-
 	r.Route("/api/v1", func(r chi.Router) {
-		svc := &finance.Service{}
-		h := finance.NewHandler(svc)
-
 		r.Get("/chat", h.ChatPage)
 		r.Get("/transaction", h.TransactionPage)
 	})
