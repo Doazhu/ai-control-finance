@@ -1,7 +1,7 @@
 package finance
 
 type Service struct {
-	service *Service
+	repo *Repository
 }
 
 func (s *Service) GetTransactions() []string {
