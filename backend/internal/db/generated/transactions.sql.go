@@ -7,9 +7,94 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+const createTransaction = `-- name: CreateTransaction :one
+INSERT INTO transactions (user_id, amount, type, category_id, description, note, date)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, user_id, amount, type, category_id, description, note, date, created_at
+`
+
+type CreateTransactionParams struct {
+	UserID      uuid.UUID
+	Amount      string
+	Type        TransactionType
+	CategoryID  sql.NullInt32
+	Description string
+	Note        sql.NullString
+	Date        time.Time
+}
+
+func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error) {
+	row := q.db.QueryRowContext(ctx, createTransaction,
+		arg.UserID,
+		arg.Amount,
+		arg.Type,
+		arg.CategoryID,
+		arg.Description,
+		arg.Note,
+		arg.Date,
+	)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Amount,
+		&i.Type,
+		&i.CategoryID,
+		&i.Description,
+		&i.Note,
+		&i.Date,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const deleteTransaction = `-- name: DeleteTransaction :exec
+DELETE FROM transactions
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteTransactionParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) DeleteTransaction(ctx context.Context, arg DeleteTransactionParams) error {
+	_, err := q.db.ExecContext(ctx, deleteTransaction, arg.ID, arg.UserID)
+	return err
+}
+
+const getTransactionByID = `-- name: GetTransactionByID :one
+SELECT id, user_id, amount, type, category_id, description, note, date, created_at FROM transactions
+WHERE id = $1 AND user_id = $2
+`
+
+type GetTransactionByIDParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) GetTransactionByID(ctx context.Context, arg GetTransactionByIDParams) (Transaction, error) {
+	row := q.db.QueryRowContext(ctx, getTransactionByID, arg.ID, arg.UserID)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Amount,
+		&i.Type,
+		&i.CategoryID,
+		&i.Description,
+		&i.Note,
+		&i.Date,
+		&i.CreatedAt,
+	)
+	return i, err
+}
 
 const getTransactions = `-- name: GetTransactions :many
 SELECT id, user_id, amount, type, category_id, description, note, date, created_at FROM transactions
@@ -48,4 +133,48 @@ func (q *Queries) GetTransactions(ctx context.Context, userID uuid.UUID) ([]Tran
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTransaction = `-- name: UpdateTransaction :one
+UPDATE transactions
+SET amount = $1, type = $2, category_id = $3, description = $4, note = $5, date = $6
+WHERE id = $7 AND user_id = $8
+RETURNING id, user_id, amount, type, category_id, description, note, date, created_at
+`
+
+type UpdateTransactionParams struct {
+	Amount      string
+	Type        TransactionType
+	CategoryID  sql.NullInt32
+	Description string
+	Note        sql.NullString
+	Date        time.Time
+	ID          uuid.UUID
+	UserID      uuid.UUID
+}
+
+func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) (Transaction, error) {
+	row := q.db.QueryRowContext(ctx, updateTransaction,
+		arg.Amount,
+		arg.Type,
+		arg.CategoryID,
+		arg.Description,
+		arg.Note,
+		arg.Date,
+		arg.ID,
+		arg.UserID,
+	)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Amount,
+		&i.Type,
+		&i.CategoryID,
+		&i.Description,
+		&i.Note,
+		&i.Date,
+		&i.CreatedAt,
+	)
+	return i, err
 }
