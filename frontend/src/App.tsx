@@ -1,38 +1,65 @@
-import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
 import Sidebar from './components/Sidebar'
 import DashboardPage from './pages/DashboardPage'
 import TransactionsPage from './pages/TransactionsPage'
 import ChatPage from './pages/ChatPage'
 import SettingsPage from './pages/SettingsPage'
-import { useThemeStore } from './store/useThemeStore'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import ProfilePage from './pages/ProfilePage'
+import NotificationsPage from './pages/NotificationsPage'
+import SearchPage from './pages/SearchPage'
+import SubscriptionPage from './pages/SubscriptionPage'
+import BudgetPage from './pages/BudgetPage'
+import { useAuthStore } from './store/useAuthStore'
+import { useAppInit } from './hooks/useAppInit'
+import ErrorToast from './components/ErrorToast'
 
-export default function App() {
-  const { init } = useThemeStore()
-
-  // Apply saved theme on mount
-  useEffect(() => {
-    init()
-  }, [init])
+function ProtectedLayout() {
+  useAppInit() // загружаем транзакции при входе
 
   return (
-    <BrowserRouter>
-      <div className="flex min-h-screen">
-        <Sidebar />
+    <div className="flex min-h-screen bg-[#080b14]">
+      <Sidebar />
+      <ErrorToast />
+      <main className="flex-1 min-h-screen overflow-y-auto">
+        <Routes>
+          <Route path="/"              element={<DashboardPage />} />
+          <Route path="/transactions"  element={<TransactionsPage />} />
+          <Route path="/budget"        element={<BudgetPage />} />
+          <Route path="/chat"          element={<ChatPage />} />
+          <Route path="/search"        element={<SearchPage />} />
+          <Route path="/profile"       element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/subscription"  element={<SubscriptionPage />} />
+          <Route path="/settings"      element={<SettingsPage />} />
+          <Route path="*"              element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
+  )
+}
 
-        <main className="ml-60 flex-1 px-8 py-8 min-h-screen">
-          <AnimatePresence mode="wait">
-            <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/transactions" element={<TransactionsPage />} />
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </AnimatePresence>
-        </main>
-      </div>
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  return isAuthenticated() ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login"    element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/*"
+          element={
+            <RequireAuth>
+              <ProtectedLayout />
+            </RequireAuth>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   )
 }

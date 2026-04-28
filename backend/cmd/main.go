@@ -14,6 +14,7 @@ import (
 	appmiddleware "github.com/doazhu/ai-control-finance/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
@@ -53,8 +54,15 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	r.Use(apiLimiter.Middleware) // глобальный лимит на все запросы
-
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:4173", "http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+	r.Use(apiLimiter.Middleware)
+	// маршруты
 	r.Get("/", financeH.HomePage)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/auth/register", authH.Register)
@@ -62,7 +70,7 @@ func main() {
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.JWTMiddleware)
-			r.With(aiLimiter.Middleware).Post("/chat", aiH.Chat) // отдельный лимит для AI
+			r.With(aiLimiter.Middleware).Post("/chat", aiH.Chat)
 			r.Get("/transaction", financeH.GetTransactions)
 			r.Post("/transaction", financeH.CreateTransaction)
 			r.Put("/transaction/{id}", financeH.UpdateTransaction)

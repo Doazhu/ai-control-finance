@@ -22,53 +22,49 @@ func NewHandler(s *Service) *Handler {
 }
 
 type transactionRequest struct {
-	Amount      string  `json:"amount"`
-	Type        string  `json:"type"`
-	CategoryID  *int32  `json:"category_id"`
-	Description string  `json:"description"`
-	Note        *string `json:"note"`
-	Date        string  `json:"date"` // формат: 2006-01-02
+	Amount      string `json:"amount"`
+	Type        string `json:"type"`
+	Category    string `json:"category"`
+	Description string `json:"description"`
+	Date        string `json:"date"` // YYYY-MM-DD
 }
 
-// transactionResponse — чистый JSON без sql.Null* типов
 type transactionResponse struct {
-	ID          uuid.UUID `json:"id"`
-	UserID      uuid.UUID `json:"user_id"`
-	Amount      string    `json:"amount"`
-	Type        string    `json:"type"`
-	CategoryID  *int32    `json:"category_id"`
-	Description string    `json:"description"`
-	Note        *string   `json:"note"`
-	Date        string    `json:"date"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          string `json:"id"`
+	UserID      string `json:"user_id"`
+	Amount      string `json:"amount"`
+	Type        string `json:"type"`
+	Category    string `json:"category"`
+	Description string `json:"description"`
+	Date        string `json:"date"`
+	CreatedAt   string `json:"created_at"`
 }
 
-// toResponse конвертирует db.Transaction в чистый JSON-ответ
 func toResponse(t db.Transaction) transactionResponse {
-	res := transactionResponse{
-		ID:          t.ID,
-		UserID:      t.UserID,
+	category := ""
+	if t.Note.Valid {
+		category = t.Note.String
+	}
+	return transactionResponse{
+		ID:          t.ID.String(),
+		UserID:      t.UserID.String(),
 		Amount:      t.Amount,
 		Type:        string(t.Type),
+		Category:    category,
 		Description: t.Description,
 		Date:        t.Date.Format("2006-01-02"),
-		CreatedAt:   t.CreatedAt,
+		CreatedAt:   t.CreatedAt.Format(time.RFC3339),
 	}
-	if t.CategoryID.Valid {
-		res.CategoryID = &t.CategoryID.Int32
-	}
-	if t.Note.Valid {
-		res.Note = &t.Note.String
-	}
-	return res
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
 }
 
 func (h *Handler) HomePage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Endpoint Hit: homePage")
-}
-
-func (h *Handler) ChatPage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Endpoint Hit: ChatPage")
+	fmt.Fprintf(w, "FinAI API v1")
 }
 
 func (h *Handler) GetTransactions(w http.ResponseWriter, r *http.Request) {
@@ -85,8 +81,7 @@ func (h *Handler) GetTransactions(w http.ResponseWriter, r *http.Request) {
 		result[i] = toResponse(t)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
@@ -104,25 +99,23 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	categoryID := sql.NullInt32{}
-	if req.CategoryID != nil {
-		categoryID = sql.NullInt32{Int32: *req.CategoryID, Valid: true}
-	}
+	note := sql.NullString{String: req.Category, Valid: req.Category != ""}
 
-	note := sql.NullString{}
-	if req.Note != nil {
-		note = sql.NullString{String: *req.Note, Valid: true}
-	}
-
-	tx, err := h.service.CreateTransaction(r.Context(), userID, req.Amount, db.TransactionType(req.Type), categoryID, req.Description, note, date)
+	tx, err := h.service.CreateTransaction(
+		r.Context(), userID,
+		req.Amount,
+		db.TransactionType(req.Type),
+		sql.NullInt32{},
+		req.Description,
+		note,
+		date,
+	)
 	if err != nil {
 		http.Error(w, "failed to create transaction", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(toResponse(tx))
+	writeJSON(w, http.StatusCreated, toResponse(tx))
 }
 
 func (h *Handler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
@@ -146,24 +139,23 @@ func (h *Handler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	categoryID := sql.NullInt32{}
-	if req.CategoryID != nil {
-		categoryID = sql.NullInt32{Int32: *req.CategoryID, Valid: true}
-	}
+	note := sql.NullString{String: req.Category, Valid: req.Category != ""}
 
-	note := sql.NullString{}
-	if req.Note != nil {
-		note = sql.NullString{String: *req.Note, Valid: true}
-	}
-
-	tx, err := h.service.UpdateTransaction(r.Context(), txID, userID, req.Amount, db.TransactionType(req.Type), categoryID, req.Description, note, date)
+	tx, err := h.service.UpdateTransaction(
+		r.Context(), txID, userID,
+		req.Amount,
+		db.TransactionType(req.Type),
+		sql.NullInt32{},
+		req.Description,
+		note,
+		date,
+	)
 	if err != nil {
 		http.Error(w, "failed to update transaction", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toResponse(tx))
+	writeJSON(w, http.StatusOK, toResponse(tx))
 }
 
 func (h *Handler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {

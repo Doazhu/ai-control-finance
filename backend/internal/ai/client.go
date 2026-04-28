@@ -9,20 +9,17 @@ import (
 	"os"
 )
 
-// message — одно сообщение в чате
 type message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-// nativeRequest — тело запроса к нативному gen-api endpoint
 type nativeRequest struct {
 	Messages []message `json:"messages"`
 	Stream   bool      `json:"stream"`
 	IsSync   bool      `json:"is_sync"`
 }
 
-// nativeResponse — ответ от нативного gen-api endpoint
 type nativeResponse struct {
 	RequestID int64            `json:"request_id"`
 	Response  []openAIResponse `json:"response"`
@@ -37,7 +34,6 @@ type openAIResponse struct {
 	} `json:"choices"`
 }
 
-// Client — HTTP клиент для gen-api
 type Client struct {
 	apiKey  string
 	baseURL string
@@ -54,7 +50,6 @@ func NewClient() *Client {
 	}
 }
 
-// StreamChat отправляет запрос и стримит ответ в w через SSE
 func (c *Client) StreamChat(w http.ResponseWriter, systemPrompt, userMessage string) error {
 	messages := []message{
 		{Role: "system", Content: systemPrompt},
@@ -107,7 +102,6 @@ func (c *Client) StreamChat(w http.ResponseWriter, systemPrompt, userMessage str
 
 	content := result.Response[0].Choices[0].Message.Content
 
-	// Отдаём ответ клиенту через SSE
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")

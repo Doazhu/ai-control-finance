@@ -1,82 +1,106 @@
-import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, Bot, Settings, Wallet, Sun, Moon } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { useThemeStore } from '../store/useThemeStore'
-import clsx from 'clsx'
+import { NavLink, useNavigate } from 'react-router-dom'
+import {
+  Zap, LayoutDashboard, ArrowUpDown, MessageSquare,
+  LogOut, Settings, User, Bell, Search, PieChart, CreditCard,
+} from 'lucide-react'
+import { useAuthStore } from '../store/useAuthStore'
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Дашборд' },
-  { to: '/transactions', icon: ArrowLeftRight, label: 'Транзакции' },
-  { to: '/chat', icon: Bot, label: 'AI Чат' },
-  { to: '/settings', icon: Settings, label: 'Настройки' },
+  { to: '/',              icon: LayoutDashboard, label: 'Дашборд' },
+  { to: '/transactions',  icon: ArrowUpDown,      label: 'Транзакции' },
+  { to: '/budget',        icon: PieChart,         label: 'Бюджет' },
+  { to: '/chat',          icon: MessageSquare,    label: 'AI Ассистент' },
+  { to: '/search',        icon: Search,           label: 'Поиск' },
+]
+
+const secondaryItems = [
+  { to: '/profile',       icon: User,             label: 'Профиль' },
+  { to: '/notifications', icon: Bell,             label: 'Уведомления' },
+  { to: '/subscription',  icon: CreditCard,       label: 'Подписка' },
+  { to: '/settings',      icon: Settings,         label: 'Настройки' },
 ]
 
 export default function Sidebar() {
-  const { theme, toggle } = useThemeStore()
+  const logout = useAuthStore((s) => s.logout)
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 spring-btn ${
+      isActive
+        ? 'sidebar-active'
+        : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+    }`
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-60 flex flex-col
-      bg-white dark:bg-slate-900
-      border-r border-slate-200 dark:border-slate-800
-      z-40">
-
+    <aside className="w-64 border-r border-white/10 hidden lg:flex flex-col sticky top-0 h-screen z-50 bg-[#080b14] shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-6 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600">
-          <Wallet size={18} className="text-white" />
+      <div className="p-8 flex items-center gap-3">
+        <div className="w-10 h-10 bg-gradient-to-tr from-cyan-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <Zap className="text-white" size={20} />
         </div>
-        <span className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-          Finance AI
-        </span>
+        <span className="text-xl font-extrabold tracking-tight font-heading">FinAI</span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      {/* Primary nav */}
+      <nav className="px-4 space-y-1">
+        <p className="px-4 mb-2 text-[9px] font-black text-gray-600 uppercase tracking-widest">Основное</p>
         {navItems.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              clsx(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-violet-50 text-violet-700 dark:bg-violet-600/15 dark:text-violet-400'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-              )
-            }
-          >
+          <NavLink key={to} to={to} end={to === '/'} className={linkClass}>
             {({ isActive }) => (
               <>
-                <Icon size={18} className={isActive ? 'text-violet-600 dark:text-violet-400' : ''} />
-                {label}
+                <Icon size={20} className={isActive ? 'text-cyan-400' : ''} />
+                <span className="font-medium">{label}</span>
               </>
             )}
           </NavLink>
         ))}
       </nav>
 
-      {/* Theme toggle */}
-      <div className="px-3 py-4 border-t border-slate-200 dark:border-slate-800">
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={toggle}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
-            text-slate-600 dark:text-slate-400
-            hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+      {/* Secondary nav */}
+      <nav className="px-4 space-y-1 mt-4">
+        <p className="px-4 mb-2 text-[9px] font-black text-gray-600 uppercase tracking-widest">Аккаунт</p>
+        {secondaryItems.map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} className={linkClass}>
+            {({ isActive }) => (
+              <>
+                <Icon size={20} className={isActive ? 'text-cyan-400' : ''} />
+                <span className="font-medium">{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="flex-1" />
+
+      {/* Budget limit mini-card */}
+      <div className="px-6 pb-4">
+        <div className="glass-card p-4 rounded-2xl group !transition-all">
+          <p className="text-sm text-gray-400 mb-2 group-hover:text-gray-200 transition-colors">Лимит за месяц</p>
+          <div className="flex justify-between items-end mb-1">
+            <span className="text-lg font-bold text-cyan-400">72%</span>
+            <span className="text-xs text-gray-500">45k / 60k ₽</span>
+          </div>
+          <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 w-[72%] transition-all duration-1000 ease-out" />
+          </div>
+        </div>
+      </div>
+
+      {/* Logout */}
+      <div className="px-4 pb-6 border-t border-white/10 pt-4">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-gray-500 hover:text-red-400 hover:bg-red-500/5 transition-all duration-300 spring-btn"
         >
-          {theme === 'dark' ? (
-            <>
-              <Sun size={18} />
-              Светлая тема
-            </>
-          ) : (
-            <>
-              <Moon size={18} />
-              Тёмная тема
-            </>
-          )}
-        </motion.button>
+          <LogOut size={20} />
+          <span className="font-medium">Выйти</span>
+        </button>
       </div>
     </aside>
   )

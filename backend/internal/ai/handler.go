@@ -42,7 +42,6 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Достаём транзакции пользователя для контекста
 	transactions, err := h.finance.GetTransactions(r.Context(), userID)
 	if err != nil {
 		transactions = []db.Transaction{} // если ошибка — продолжаем без данных
@@ -56,7 +55,6 @@ func (h *Handler) Chat(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// buildSystemPrompt формирует системный промпт с данными пользователя
 func buildSystemPrompt(userID uuid.UUID, transactions []db.Transaction) string {
 	var sb strings.Builder
 
@@ -77,7 +75,6 @@ FORBIDDEN:
 
 `)
 
-	// Добавляем транзакции в контекст
 	if len(transactions) == 0 {
 		sb.WriteString("USER FINANCIAL DATA: No transactions found.\n")
 	} else {
